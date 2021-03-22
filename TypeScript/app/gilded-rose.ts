@@ -1,14 +1,10 @@
-export class Item {
-    name: string;
-    sellIn: number;
-    quality: number;
-
-    constructor(name, sellIn, quality) {
-        this.name = name;
-        this.sellIn = sellIn;
-        this.quality = quality;
-    }
-}
+import { BackstagePassItem } from "./models/backstage-pass-item";
+import { BasicItem, Item } from "./models/basic-item";
+import { ConjuredItem } from "./models/conjured-item";
+import { GildedValeConstants } from "./models/gilded-constants";
+import { InvestmentItem } from "./models/investment-item";
+import { ItemType } from "./models/item-type";
+import { LegendaryItem } from "./models/legendary-item";
 
 export class GildedRose {
     items: Array<Item>;
@@ -17,53 +13,53 @@ export class GildedRose {
         this.items = items;
     }
 
-    updateQuality() {
-        for (let i = 0; i < this.items.length; i++) {
-            if (this.items[i].name != 'Aged Brie' && this.items[i].name != 'Backstage passes to a TAFKAL80ETC concert') {
-                if (this.items[i].quality > 0) {
-                    if (this.items[i].name != 'Sulfuras, Hand of Ragnaros') {
-                        this.items[i].quality = this.items[i].quality - 1
-                    }
-                }
-            } else {
-                if (this.items[i].quality < 50) {
-                    this.items[i].quality = this.items[i].quality + 1
-                    if (this.items[i].name == 'Backstage passes to a TAFKAL80ETC concert') {
-                        if (this.items[i].sellIn < 11) {
-                            if (this.items[i].quality < 50) {
-                                this.items[i].quality = this.items[i].quality + 1
-                            }
+    updateQuality(daysPassed: number = 1) {
+        const updatedItems: BasicItem[] = [];
+        const validatedList = (this.items || [])
+        for (let item of validatedList) {
+            if (!item || item.name == null || item.quality == null || item.sellIn == null)
+                continue;
+
+            if (item instanceof BasicItem)
+                updatedItems.push(item.updateValue(daysPassed));
+            else {
+                //handle legacy items
+                const itemType = GildedValeConstants.KnownLegacyItemTypeMap[item.name];
+                switch (itemType) {
+                    case ItemType.InvestmentItem:
+                        {
+                            const legacyItem = new InvestmentItem(item.name, item.sellIn, item.quality);
+                            updatedItems.push(legacyItem.updateValue(daysPassed));
+                            break;
                         }
-                        if (this.items[i].sellIn < 6) {
-                            if (this.items[i].quality < 50) {
-                                this.items[i].quality = this.items[i].quality + 1
-                            }
+                    case ItemType.LegendaryItem:
+                        {
+                            const legacyItem = new LegendaryItem(item.name, item.sellIn, item.quality);
+                            updatedItems.push(legacyItem.updateValue(daysPassed));
+                            break;
                         }
-                    }
-                }
-            }
-            if (this.items[i].name != 'Sulfuras, Hand of Ragnaros') {
-                this.items[i].sellIn = this.items[i].sellIn - 1;
-            }
-            if (this.items[i].sellIn < 0) {
-                if (this.items[i].name != 'Aged Brie') {
-                    if (this.items[i].name != 'Backstage passes to a TAFKAL80ETC concert') {
-                        if (this.items[i].quality > 0) {
-                            if (this.items[i].name != 'Sulfuras, Hand of Ragnaros') {
-                                this.items[i].quality = this.items[i].quality - 1
-                            }
+                    case ItemType.BackstagePassItem:
+                        {
+                            const legacyItem = new BackstagePassItem(item.name, item.sellIn, item.quality);
+                            updatedItems.push(legacyItem.updateValue(daysPassed));
+                            break;
                         }
-                    } else {
-                        this.items[i].quality = this.items[i].quality - this.items[i].quality
-                    }
-                } else {
-                    if (this.items[i].quality < 50) {
-                        this.items[i].quality = this.items[i].quality + 1
-                    }
+                    case ItemType.ConjuredItem:
+                        {
+                            const legacyItem = new ConjuredItem(item.name, item.sellIn, item.quality);
+                            updatedItems.push(legacyItem.updateValue(daysPassed));
+                            break;
+                        }
+                    default:
+                        {
+                            const legacyItem = new BasicItem(item.name, item.sellIn, item.quality);
+                            updatedItems.push(legacyItem.updateValue(daysPassed));
+                        }
                 }
             }
         }
 
+        this.items = updatedItems
         return this.items;
     }
 }
